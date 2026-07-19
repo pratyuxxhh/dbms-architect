@@ -23,9 +23,9 @@ public class BuildmyschemaApplication {
 		System.out.println(stringTest);
 	}
 
-	@Bean
-    CommandLineRunner runner(AiService aiService) {
-		return args -> aiService.testAi();
-	}
+//	@Bean
+//    CommandLineRunner runner(AiService aiService) {
+//		return args -> aiService.testAi();
+//	}
 
 }

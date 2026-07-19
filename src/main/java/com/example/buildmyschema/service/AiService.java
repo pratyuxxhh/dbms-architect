@@ -1,6 +1,7 @@
 package com.example.buildmyschema.service;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -9,11 +10,11 @@ public class AiService {
     @Autowired
     private ChatClient chatClient;
 
-    public void testAi(){
-        String res = chatClient.prompt()
-                .user("hie there")
+    public String testAi(String m ){
+        return chatClient.prompt()
+                .user(m)
                 .call()
                 .content();
-        System.out.println(res);
+
     }
 }

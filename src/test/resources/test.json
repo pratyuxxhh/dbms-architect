@@ -1,0 +1,351 @@
+{
+  "queries": [
+    {
+      "importantAndBasicQueries": "-- 1) List all active menu items\nSELECT mi.id, mi.name, mi.price\nFROM menu_items mi\nWHERE mi.is_active = TRUE\nORDER BY mi.name;\n\n-- 2) Create a new order (example)\n-- (Insert into orders; order_lines inserted separately)\nINSERT INTO orders (table_id, status, placed_at)\nVALUES (1, 'PLACED', CURRENT_TIMESTAMP);\n\n-- 3) Add items to an order\n-- (example: add 2 Margherita pizzas)\nINSERT INTO order_lines (order_id, menu_item_id, quantity, unit_price)\nVALUES (1, 10, 2, 12.50);\n\n-- 4) Get order details with totals\nSELECT \n  o.id AS order_id,\n  o.status,\n  o.placed_at,\n  t.id AS table_number,\n  SUM(ol.quantity * ol.unit_price) AS order_total,\n  COUNT(*) AS line_count\nFROM orders o\nJOIN tables t ON t.id = o.table_id\nJOIN order_lines ol ON ol.order_id = o.id\nWHERE o.id = 1\nGROUP BY o.id, o.status, o.placed_at, t.id;\n\n-- 5) Get an order's line items\nSELECT \n  ol.id AS order_line_id,\n  mi.name AS item_name,\n  ol.quantity,\n  ol.unit_price,\n  (ol.quantity * ol.unit_price) AS line_total\nFROM order_lines ol\nJOIN menu_items mi ON mi.id = ol.menu_item_id\nWHERE ol.order_id = 1\nORDER BY ol.id;\n\n-- 6) Record a payment for an order\nINSERT INTO payments (order_id, amount, method, status, paid_at)\nVALUES (1, 25.00, 'CASH', 'PAID', CURRENT_TIMESTAMP);\n\n-- 7) Find unpaid orders\nSELECT o.id, o.status, o.placed_at, t.id AS table_number\nFROM orders o\nJOIN tables t ON t.id = o.table_id\nWHERE o.status IN ('PLACED','IN_PROGRESS');"
+    }
+  ],
+  "schemaName": "restaurant_app",
+  "schemas": [
+    {
+      "name": "restaurant_app",
+      "tables": [
+        {
+          "columns": [
+            {
+              "autoIncrement": true,
+              "dataType": "bigint",
+              "defaultValue": "",
+              "name": "id",
+              "nullable": false,
+              "primaryKey": true,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "varchar(100)",
+              "defaultValue": "",
+              "name": "name",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "int",
+              "defaultValue": "",
+              "name": "capacity",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "boolean",
+              "defaultValue": "TRUE",
+              "name": "is_active",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            }
+          ],
+          "foreignKeys": [],
+          "name": "tables"
+        },
+        {
+          "columns": [
+            {
+              "autoIncrement": true,
+              "dataType": "bigint",
+              "defaultValue": "",
+              "name": "id",
+              "nullable": false,
+              "primaryKey": true,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "bigint",
+              "defaultValue": "",
+              "name": "table_id",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "varchar(30)",
+              "defaultValue": "PLACED",
+              "name": "status",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "timestamp",
+              "defaultValue": "CURRENT_TIMESTAMP",
+              "name": "placed_at",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "timestamp",
+              "defaultValue": "",
+              "name": "updated_at",
+              "nullable": true,
+              "primaryKey": false,
+              "unique": false
+            }
+          ],
+          "foreignKeys": [
+            {
+              "column": "table_id",
+              "onDelete": "RESTRICT",
+              "onUpdate": "CASCADE",
+              "referencedColumn": "id",
+              "referencedTable": "tables"
+            }
+          ],
+          "name": "orders"
+        },
+        {
+          "columns": [
+            {
+              "autoIncrement": true,
+              "dataType": "bigint",
+              "defaultValue": "",
+              "name": "id",
+              "nullable": false,
+              "primaryKey": true,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "bigint",
+              "defaultValue": "",
+              "name": "order_id",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "bigint",
+              "defaultValue": "",
+              "name": "menu_item_id",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "int",
+              "defaultValue": "1",
+              "name": "quantity",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "decimal(10,2)",
+              "defaultValue": "",
+              "name": "unit_price",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "varchar(255)",
+              "defaultValue": "",
+              "name": "notes",
+              "nullable": true,
+              "primaryKey": false,
+              "unique": false
+            }
+          ],
+          "foreignKeys": [
+            {
+              "column": "order_id",
+              "onDelete": "CASCADE",
+              "onUpdate": "CASCADE",
+              "referencedColumn": "id",
+              "referencedTable": "orders"
+            },
+            {
+              "column": "menu_item_id",
+              "onDelete": "RESTRICT",
+              "onUpdate": "CASCADE",
+              "referencedColumn": "id",
+              "referencedTable": "menu_items"
+            }
+          ],
+          "name": "order_lines"
+        },
+        {
+          "columns": [
+            {
+              "autoIncrement": true,
+              "dataType": "bigint",
+              "defaultValue": "",
+              "name": "id",
+              "nullable": false,
+              "primaryKey": true,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "varchar(120)",
+              "defaultValue": "",
+              "name": "name",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "text",
+              "defaultValue": "",
+              "name": "description",
+              "nullable": true,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "decimal(10,2)",
+              "defaultValue": "",
+              "name": "price",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "boolean",
+              "defaultValue": "TRUE",
+              "name": "is_active",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "varchar(80)",
+              "defaultValue": "",
+              "name": "category",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            }
+          ],
+          "foreignKeys": [],
+          "name": "menu_items"
+        },
+        {
+          "columns": [
+            {
+              "autoIncrement": true,
+              "dataType": "bigint",
+              "defaultValue": "",
+              "name": "id",
+              "nullable": false,
+              "primaryKey": true,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "bigint",
+              "defaultValue": "",
+              "name": "order_id",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": true
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "decimal(10,2)",
+              "defaultValue": "",
+              "name": "amount",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "varchar(20)",
+              "defaultValue": "CASH",
+              "name": "method",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "varchar(20)",
+              "defaultValue": "PAID",
+              "name": "status",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            },
+            {
+              "autoIncrement": false,
+              "dataType": "timestamp",
+              "defaultValue": "CURRENT_TIMESTAMP",
+              "name": "paid_at",
+              "nullable": false,
+              "primaryKey": false,
+              "unique": false
+            }
+          ],
+          "foreignKeys": [
+            {
+              "column": "order_id",
+              "onDelete": "CASCADE",
+              "onUpdate": "CASCADE",
+              "referencedColumn": "id",
+              "referencedTable": "orders"
+            }
+          ],
+          "name": "payments"
+        }
+      ],
+      "relationships": [
+        {
+          "fromColumn": "table_id",
+          "fromTable": "orders",
+          "toColumn": "id",
+          "toTable": "tables",
+          "type": "MANY_TO_ONE"
+        },
+        {
+          "fromColumn": "order_id",
+          "fromTable": "order_lines",
+          "toColumn": "id",
+          "toTable": "orders",
+          "type": "MANY_TO_ONE"
+        },
+        {
+          "fromColumn": "menu_item_id",
+          "fromTable": "order_lines",
+          "toColumn": "id",
+          "toTable": "menu_items",
+          "type": "MANY_TO_ONE"
+        },
+        {
+          "fromColumn": "order_id",
+          "fromTable": "payments",
+          "toColumn": "id",
+          "toTable": "orders",
+          "type": "ONE_TO_ONE"
+        }
+      ],
+      "views": [],
+      "sequences": []
+    }
+  ]
+}

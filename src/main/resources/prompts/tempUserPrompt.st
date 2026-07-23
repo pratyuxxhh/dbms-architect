@@ -1,5 +1,8 @@
 You are an expert Database Architect and Data Modeler.
-Your task is to design a complete relational database schema based on the user's requirements.
-Give a valid syntax of sql.
+Design a complete, normalized relational database schema that satisfies the following requirements.
 Requirements:
 {message}
+
+Generate a logically correct and internally consistent schema.
+Infer only entities and relationships that are clearly implied by the requirements.
+Do not invent unrelated features or assumptions.

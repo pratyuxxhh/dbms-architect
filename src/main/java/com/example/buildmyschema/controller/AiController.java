@@ -5,7 +5,9 @@ import com.example.buildmyschema.service.AiService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -16,9 +18,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.MediaType;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 
+@Slf4j
 @RestController
 @RequestMapping("/ai")
 public class AiController {
@@ -30,30 +35,21 @@ public class AiController {
         return new ResponseEntity<>(aiService.testAi(m), HttpStatus.OK);
     }
 
-    @GetMapping("/ai")
-    public ResponseEntity<String> testAiWithId(@RequestParam String m,@RequestParam String id) {
-        return new ResponseEntity<>(aiService.testAiwithPrivatechat(m,id), HttpStatus.OK);
-    }
-
-    //working great
-    @GetMapping("/schema")
-    public ResponseEntity<ResponseEntityy> getTheSchema(@RequestParam String m, @RequestParam String id) {
-        return ResponseEntity.ok(aiService.testAiwithPrivatechatWithCustomOutput(m,id));
-    }
-    @GetMapping("/schemastring")
-    public ResponseEntity<String> getTheSchemaString(@RequestParam String m, @RequestParam String id)  {
-        try{
-        return ResponseEntity.ok().body(aiService.jsonToStringResponse(m,id));
-
-        }catch(JsonProcessingException e){
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
     @GetMapping("/download")
-    public ResponseEntity<Resource> getTheSchemafile(@RequestParam String m, @RequestParam String id) throws JsonProcessingException {
-        File file = aiService.generateSchemaFile(m,id);
+    public ResponseEntity<?> getTheSchemaFile(@RequestParam String m, @RequestParam String id) throws JsonProcessingException {
+        File file = null;
+        file = aiService.generateDownloadableSchemaFile(m,id);
+
+        if (file == null) {
+            return ResponseEntity.badRequest()
+                    .body("The request is invalid. No SQL schema could be generated.");
+        }
+
+        if (!file.exists()) {
+            return ResponseEntity.notFound().build();
+        }
         Resource resource = new FileSystemResource(file);
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + file.getName() + "\"")

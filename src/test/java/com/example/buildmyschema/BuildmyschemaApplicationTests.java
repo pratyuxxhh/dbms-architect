@@ -4,13 +4,18 @@ import com.example.buildmyschema.service.AiService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 class BuildmyschemaApplicationTests {
+
 
 	@Test
 	void contextLoads() throws IOException {
@@ -22,5 +27,6 @@ class BuildmyschemaApplicationTests {
 		String jsonString = mapper.writeValueAsString(node);
 		System.out.println(jsonString);
 	}
+
 
 }

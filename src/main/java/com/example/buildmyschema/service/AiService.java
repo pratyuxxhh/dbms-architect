@@ -29,6 +29,8 @@ public class AiService {
     private VectorStore vectorStore;
     @Autowired
     private EmbeddingModel embeddingModel;
+    @Autowired
+    private VectorService vectorService;
     @Value("classpath:prompts/tempSystemPrompt.st")
     private Resource system;
     @Value("classpath:prompts/tempUserPrompt.st")
@@ -55,13 +57,14 @@ public class AiService {
     }
 
     public File generateDownloadableSchemaFile(String m , String id) throws JsonProcessingException {
+        if (!vectorService.isRelevantPrompt(m)) {
+            return null;
+        }
         ResponseEntityy r = testAiWithPrivatechatWithCustomOutput(m , id);
-
         ObjectMapper mapper = new ObjectMapper();
         String minifiedJson = mapper.writeValueAsString(r);
 
         System.out.println(minifiedJson);
-
 
         try {
             File result = generator.generateDownloadableFile(minifiedJson);

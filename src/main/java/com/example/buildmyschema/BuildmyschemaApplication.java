@@ -1,12 +1,15 @@
 package com.example.buildmyschema;
 
 import com.example.buildmyschema.service.AiService;
+import com.example.buildmyschema.service.VectorService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+
+import java.sql.SQLOutput;
 
 @SpringBootApplication
 public class BuildmyschemaApplication {
@@ -24,8 +27,10 @@ public class BuildmyschemaApplication {
 	}
 
 //	@Bean
-//    CommandLineRunner runner(AiService aiService) {
-//		return args -> aiService.testAi();
+//    CommandLineRunner runner(VectorService vectorService) {
+//		System.out.println("adding data to vector database");
+//		return args -> vectorService.testSimilaritySearch();
 //	}
+
 
 }

@@ -251,7 +251,75 @@ public class VectorService {
         Add indexes.
         Add constraints.
         Generate SQL.
-        """)
+        """),
+                new Document("Generate a SQL database schema based on my requirements."),
+                new Document("Design a relational database for the following application."),
+                new Document("Create the tables, primary keys and foreign keys for this system."),
+                new Document("Generate an ER diagram and corresponding SQL DDL for this domain."),
+                new Document("Normalize this database design and remove redundant data."),
+                new Document("Add appropriate indexes and constraints to this schema."),
+                new Document("Generate CREATE TABLE statements with proper relationships."),
+                new Document("Improve and optimize this existing database schema."),
+                new Document("Convert these requirements into a normalized relational schema."),
+                new Document("Generate seed data / sample INSERT statements for this schema."),
+                new Document("Add a new column and a foreign key constraint to this table."),
+                new Document("Suggest a many-to-many relationship design using a junction table."),
+                new Document("Review my schema and point out normalization issues."),
+                new Document("Convert this schema from MySQL syntax to PostgreSQL syntax."),
+                new Document("What primary key and indexing strategy should I use for this table?"),
+
+                // ---------- Restaurant domain ----------
+                new Document("Design a database schema for a restaurant management system with menu items, orders, and payments."),
+                new Document("Create tables for a restaurant app that handles reservations, tables, and kitchen orders."),
+                new Document("I need a schema for a food ordering system with customers, menu categories, and order items."),
+
+                // ---------- Hospital / healthcare domain ----------
+                new Document("Design a hospital management database with patients, doctors, appointments, and prescriptions."),
+                new Document("Create a schema for a pharmacy system tracking medicines, suppliers, and billing."),
+                new Document("I need tables for a clinic system with departments, wards, and medical records."),
+
+                // ---------- Banking / fintech domain ----------
+                new Document("Design a banking database schema with accounts, transactions, branches, and loans."),
+                new Document("Create a schema for a UPI payment system with beneficiaries and transaction history."),
+                new Document("I need tables for a credit card and billing system with statements and payments."),
+
+                // ---------- E-commerce domain ----------
+                new Document("Design an e-commerce database with products, categories, cart, orders, and payments."),
+                new Document("Create a schema for an online store with inventory, suppliers, shipments, and reviews."),
+                new Document("I need tables for a wishlist and cart feature linked to users and products."),
+
+                // ---------- Education domain ----------
+                new Document("Design a school management schema with students, teachers, classes, and attendance."),
+                new Document("Create a database for a college with courses, enrollments, grades, and departments."),
+                new Document("I need a library management schema with books, members, and borrowing records."),
+
+                // ---------- Hospitality / travel domain ----------
+                new Document("Design a hotel booking system schema with rooms, guests, reservations, and billing."),
+                new Document("Create a database for an airline reservation system with flights, seats, and passengers."),
+                new Document("I need a schema for a movie ticket booking app with shows, screens, and seats."),
+
+                // ---------- Operations / enterprise domain ----------
+                new Document("Design a warehouse and inventory management database with stock levels and suppliers."),
+                new Document("Create a CRM schema with leads, contacts, deals, and activities."),
+                new Document("Design an HRMS schema with employees, payroll, attendance, and departments."),
+                new Document("Create an ERP database schema covering purchasing, inventory, and finance modules."),
+
+                // ---------- Misc app domains ----------
+                new Document("Design a ride sharing app database with drivers, riders, trips, and payments."),
+                new Document("Create a gym management schema with members, trainers, and subscription plans."),
+
+                // ---------- Concept grounding (as sentences, not bare nouns) ----------
+                new Document("A primary key is a column or set of columns that uniquely identifies each row in a table."),
+                new Document("A foreign key is a column that references the primary key of another table to enforce a relationship."),
+                new Document("A composite key uses two or more columns together to uniquely identify a row."),
+                new Document("Normalization is the process of organizing tables to reduce redundancy and avoid update anomalies."),
+                new Document("A junction table is used to resolve a many-to-many relationship between two entities."),
+                new Document("An index improves query performance on frequently searched columns."),
+                new Document("A check constraint restricts the values that can be stored in a column."),
+
+                // ---------- Naming / style conventions ----------
+                new Document("Use snake_case naming, plural table names, and an id column as the primary key for every table."),
+                new Document("Foreign key columns should follow the table_id naming convention.")
         );
         vectorStore.add(documents);
     }

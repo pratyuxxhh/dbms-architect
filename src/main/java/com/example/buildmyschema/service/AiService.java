@@ -60,6 +60,7 @@ public class AiService {
         if (!vectorService.isRelevantPrompt(m)) {
             return null;
         }
+
         ResponseEntityy r = testAiWithPrivatechatWithCustomOutput(m , id);
         ObjectMapper mapper = new ObjectMapper();
         String minifiedJson = mapper.writeValueAsString(r);
@@ -88,9 +89,3 @@ public class AiService {
 
 }
 
-/*
-today's target
-custom output
-rag implement
-prompt customize
- */

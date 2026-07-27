@@ -17,6 +17,4 @@ public class AiConfig {
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build()).build();
                 // will store in memory data , once app os restart everything is gone
     }
-
-
 }

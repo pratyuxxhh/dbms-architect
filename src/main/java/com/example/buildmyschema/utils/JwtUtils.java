@@ -24,13 +24,8 @@ public class JwtUtils {
     }
 
     public String extractUsername(String token) {
-        try {
             Claims claims = extractAllClaims(token);
             return claims.getSubject();
-        }catch (ExpiredJwtException e){
-            log.error("Username has expired");
-            throw new RuntimeException("Username has expired");
-        }
     }
 
     public Date extractExpiration(String token) {
@@ -61,7 +56,7 @@ public class JwtUtils {
                 .header().empty().add("typ","JWT")
                 .and()
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 )) // 5 minutes expiration time
+                .expiration(new Date(System.currentTimeMillis() + 1000 * 60*20 )) // 5 minutes expiration time
                 .signWith(getSigningKey())
                 .compact();
     }

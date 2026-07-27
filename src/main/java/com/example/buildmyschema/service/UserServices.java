@@ -104,13 +104,4 @@ public class UserServices {
 
     }
 
-
-
-    /*
-    register
-    loign
-    get tokens
-    get prompts and result history
-
-     */
 }

@@ -1,5 +1,6 @@
 package com.example.buildmyschema.service;
 
+import com.example.buildmyschema.advisors.TokenCountAdvisor;
 import com.example.buildmyschema.entity.ResponseEntityy;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -35,8 +36,9 @@ public class AiService {
     private Resource system;
     @Value("classpath:prompts/tempUserPrompt.st")
     private Resource user;
-    public String testAi(String m ){
+    public String testAi(String m  , String id ){
         return chatClient.prompt()
+                .advisors(a->a.param(ChatMemory.CONVERSATION_ID , id))
                 .user(m)
                 .call()
                 .content();
@@ -45,9 +47,9 @@ public class AiService {
 
     public ResponseEntityy testAiWithPrivatechatWithCustomOutput(String m  , String id){
 
+
         return chatClient.prompt()
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, id))
-                .advisors(new SimpleLoggerAdvisor())
                 .advisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
                 .system(s->s.text(system))
                 .user(u->u.text(user).param("message",m))
@@ -73,18 +75,20 @@ public class AiService {
             return result;
         } catch (SqlGenerator.InvalidSchemaException e) {
             System.err.println("Invalid schema JSON: " + e.getMessage());
+            throw new RuntimeException("Invalid schema JSON");
 
         } catch (IOException e) {
             System.err.println("I/O error while generating SQL file: " + e.getMessage());
+            throw new RuntimeException("I/O error while generating SQL file");
 
         } catch (IllegalArgumentException e) {
             System.err.println("Invalid arguments: " + e.getMessage());
+            throw new RuntimeException("Invalid arguments");
 
         } catch (Exception e) {
             System.err.println("Unexpected error: " + e.getMessage());
-            e.printStackTrace();
+            throw new RuntimeException("Unexpected error");
         }
-        return null;
     }
 
 }

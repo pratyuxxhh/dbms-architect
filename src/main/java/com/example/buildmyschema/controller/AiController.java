@@ -13,6 +13,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,13 +34,17 @@ public class AiController {
 
     @GetMapping("/openai")
     public ResponseEntity<String> testAi(@RequestParam String m) {
-        return new ResponseEntity<>(aiService.testAi(m), HttpStatus.OK);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        assert authentication != null;
+        return new ResponseEntity<>(aiService.testAi(m, authentication.getName()), HttpStatus.OK);
     }
 
     @GetMapping("/download")
-    public ResponseEntity<?> getTheSchemaFile(@RequestParam String m, @RequestParam String id) throws JsonProcessingException {
+    public ResponseEntity<?> getTheSchemaFile(@RequestParam String m) throws JsonProcessingException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        assert authentication != null;
         File file = null;
-        file = aiService.generateDownloadableSchemaFile(m,id);
+        file = aiService.generateDownloadableSchemaFile(m,authentication.getName());
 
         if (file == null) {
             return ResponseEntity.badRequest()

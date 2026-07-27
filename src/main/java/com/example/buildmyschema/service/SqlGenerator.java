@@ -29,7 +29,7 @@ import java.util.Set;
  * construction time rather than silently producing SQL that MySQL rejects.
  */
 @Service
-public class SqlGenerator {
+public class SqlGenerator {   //  little more work is needed
 
     /** @deprecated only {@link #MYSQL} is supported; kept for source compatibility. */
     @Deprecated
@@ -212,8 +212,6 @@ public class SqlGenerator {
             root = MAPPER.readTree(schemaJson);
         } catch (JsonProcessingException e) {
             throw new InvalidSchemaException("Malformed JSON: " + e.getOriginalMessage(), e);
-        } catch (IOException e) {
-            throw new InvalidSchemaException("Could not parse JSON", e);
         }
 
         if (root == null || root.isMissingNode() || root.isNull()) {
@@ -331,7 +329,7 @@ public class SqlGenerator {
                     "Table '" + tableName + "' defines more than one AUTO_INCREMENT column; MySQL allows only one per table");
         }
         if (autoIncrementCount == 1 && primaryKeyOrder.size() > 1
-                && !primaryKeyOrder.get(0).equals(autoIncrementColumn)) {
+                && !primaryKeyOrder.getFirst().equals(autoIncrementColumn)) {
             throw new InvalidSchemaException(
                     "Table '" + tableName + "': when AUTO_INCREMENT is part of a composite PRIMARY KEY, it must be "
                             + "the first column listed (MySQL requirement). Column '" + autoIncrementColumn
@@ -565,12 +563,11 @@ public class SqlGenerator {
     // ------------------------------------------------------------------
 
     private String formatDefault(String defaultValue, String dataType) {
-        String trimmed = defaultValue.trim();
 
         // If the source JSON already wrapped the value in single quotes
         // (e.g. "'ACTIVE'"), unwrap it and un-escape doubled quotes so we
         // don't end up re-quoting an already-quoted literal.
-        String unwrapped = trimmed;
+        String unwrapped = defaultValue.trim();
         if (unwrapped.length() >= 2 && unwrapped.startsWith("'") && unwrapped.endsWith("'")) {
             unwrapped = unwrapped.substring(1, unwrapped.length() - 1).replace("''", "'");
         }

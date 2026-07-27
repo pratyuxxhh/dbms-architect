@@ -25,7 +25,9 @@ public class UserEntity {
     private String password;
     private String firstName;
     private String lastName;
-    private long tokensUsed;
+    private long totalTokenUsed;
+    private long inputTokens;
+    private long outputTokens;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;    // give account update options to user
     private List<String> userPrompts;

@@ -29,7 +29,7 @@ public class BuildmyschemaApplication {
 //	@Bean
 //    CommandLineRunner runner(VectorService vectorService) {
 //		System.out.println("adding data to vector database");
-//		return args -> vectorService.testSimilaritySearch();
+//		return args -> vectorService.addVectorDocuments();
 //	}
 
 

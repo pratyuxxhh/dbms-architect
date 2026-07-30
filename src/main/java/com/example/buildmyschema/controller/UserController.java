@@ -26,4 +26,12 @@ public class UserController {
         return new ResponseEntity<>("you logged in successfully , hie "+ username, HttpStatus.OK);
     }
 
+    @GetMapping("/getName")
+    public ResponseEntity<String> getUserName(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        assert authentication != null;
+        String username = authentication.getName();
+        return new ResponseEntity<>(username, HttpStatus.OK);
+    }
+
 }

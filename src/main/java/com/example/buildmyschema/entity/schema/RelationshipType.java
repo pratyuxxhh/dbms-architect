@@ -1,4 +1,4 @@
-package com.example.buildmyschema.entity;
+package com.example.buildmyschema.entity.schema;
 
 public enum RelationshipType {
     ONE_TO_ONE,

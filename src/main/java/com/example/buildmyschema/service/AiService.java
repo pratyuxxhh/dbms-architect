@@ -1,12 +1,10 @@
 package com.example.buildmyschema.service;
 
-import com.example.buildmyschema.advisors.TokenCountAdvisor;
-import com.example.buildmyschema.entity.ResponseEntityy;
+import com.example.buildmyschema.entity.schema.ResponseEntityy;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.AdvisorParams;
-import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -19,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.IOException;
 
+@Slf4j
 @Service
 public class AiService {
     @Autowired
@@ -60,8 +59,10 @@ public class AiService {
 
     public File generateDownloadableSchemaFile(String m , String id) throws JsonProcessingException {
         if (!vectorService.isRelevantPrompt(m)) {
+            log.info("Prompt not relevant");
             return null;
         }
+            log.info("Prompt is relevant");
 
         ResponseEntityy r = testAiWithPrivatechatWithCustomOutput(m , id);
         ObjectMapper mapper = new ObjectMapper();

@@ -1,13 +1,9 @@
 package com.example.buildmyschema.controller;
 
-import com.example.buildmyschema.entity.ResponseEntityy;
 import com.example.buildmyschema.service.AiService;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -20,10 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.MediaType;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @RestController

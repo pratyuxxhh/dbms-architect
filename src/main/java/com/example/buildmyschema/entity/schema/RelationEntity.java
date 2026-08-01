@@ -1,4 +1,4 @@
-package com.example.buildmyschema.entity;
+package com.example.buildmyschema.entity.schema;
 
 import lombok.Data;
 

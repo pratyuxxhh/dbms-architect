@@ -62,6 +62,7 @@ public class AiService {
             log.info("Prompt not relevant");
             return null;
         }
+            log.info(m);
             log.info("Prompt is relevant");
 
         ResponseEntityy r = testAiWithPrivatechatWithCustomOutput(m , id);

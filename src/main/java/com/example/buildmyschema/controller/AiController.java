@@ -60,11 +60,4 @@ public class AiController {
 
 }
 
-/*
-    right now i am able to convert the json to sql DDL syntax ,
 
-    next task is to return a zip containing
-    - schema json
-    - sql file
-    - seed file ( find a way to generate a seed)
- */

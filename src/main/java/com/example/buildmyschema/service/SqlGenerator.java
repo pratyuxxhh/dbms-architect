@@ -1,8 +1,13 @@
 package com.example.buildmyschema.service;
 
+import com.example.buildmyschema.entity.users.UserEntity;
+import com.example.buildmyschema.repository.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -10,6 +15,7 @@ import java.io.IOException;
 import java.io.Serial;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -29,7 +35,9 @@ import java.util.Set;
  * construction time rather than silently producing SQL that MySQL rejects.
  */
 @Service
-public class SqlGenerator {   //  little more work is needed
+public class SqlGenerator {
+    @Autowired
+    private UserRepository userRepository;
 
     /** @deprecated only {@link #MYSQL} is supported; kept for source compatibility. */
     @Deprecated
@@ -137,7 +145,7 @@ public class SqlGenerator {   //  little more work is needed
             throw new IllegalArgumentException("inputJson must not be null or empty");
         }
 
-        String sql = generateSql(inputJson);
+        String sql = generateSql(inputJson,new String[1]);
 
         if (outputSqlFile == null) {
             throw new IllegalArgumentException("outputSqlFile must not be null");
@@ -161,18 +169,26 @@ public class SqlGenerator {   //  little more work is needed
         return outputSqlFile;
     }
 
-    public File generateDownloadableFile(String inputJson)
+    public File generateDownloadableFile(String inputJson )
             throws InvalidSchemaException, IOException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        assert authentication != null;
+        UserEntity u = userRepository.findByUsername(authentication.getName()).orElse(null);
 
         if (inputJson == null || inputJson.trim().isEmpty()) {
             throw new IllegalArgumentException("inputJson must not be null or empty");
         }
-
-        String sql = generateSql(inputJson);
+        String[] str= new String[1];
+        String sql = generateSql(inputJson , str);
 
         File sqlFile = File.createTempFile("schema-", ".sql");
 
         try {
+            if(u!=null){
+                u.setUpdatedAt(LocalDateTime.now());
+                u.getHistory().add(Map.of(str[0],sql));
+                userRepository.save(u);
+            }
             Files.writeString(sqlFile.toPath(), sql, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new IOException("Failed to write SQL file.", e);
@@ -197,12 +213,12 @@ public class SqlGenerator {   //  little more work is needed
      * Same conversion, but returns the SQL as raw bytes instead of writing to disk.
      * Useful for streaming straight back in an HTTP response.
      */
-    public byte[] generateSqlBytes(String schemaJson) throws InvalidSchemaException {
-        return generateSql(schemaJson).getBytes(StandardCharsets.UTF_8);
+    public byte[] generateSqlBytes(String schemaJson , String[] str) throws InvalidSchemaException {
+        return generateSql(schemaJson,str).getBytes(StandardCharsets.UTF_8);
     }
 
     /** Core conversion: JSON string -&gt; MySQL 8.x DDL string. */
-    public String generateSql(String schemaJson) throws InvalidSchemaException {
+    public String generateSql(String schemaJson , String[] str) throws InvalidSchemaException {
         if (schemaJson == null || schemaJson.trim().isEmpty()) {
             throw new InvalidSchemaException("Schema JSON is null or empty");
         }
@@ -228,7 +244,7 @@ public class SqlGenerator {   //  little more work is needed
 
         for (JsonNode schema : schemas) {
             String schemaName = schema.path("name").asText(null);
-
+            str[0] =  schemaName;
             if (schemaName != null && !schemaName.isBlank()) {
                 checkIdentifierLength("Database name", schemaName);
                 sql.append("CREATE DATABASE IF NOT EXISTS ").append(quoteIdent(schemaName))

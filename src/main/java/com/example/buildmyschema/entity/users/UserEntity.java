@@ -11,7 +11,10 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 @Getter
@@ -31,6 +34,7 @@ public class UserEntity {
     private long totalTokenUsed;
     private long inputTokens;
     private long outputTokens;
+    private List<Map<String , String>> history = new ArrayList<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;    // give account update options to user
     private List<String> userPrompts;

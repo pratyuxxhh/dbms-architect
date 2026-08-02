@@ -1,11 +1,11 @@
 package com.example.buildmyschema.service;
 
+import com.example.buildmyschema.entity.users.HistoryDTO;
 import com.example.buildmyschema.entity.users.LoginDTO;
 import com.example.buildmyschema.entity.users.RegisterDTO;
 import com.example.buildmyschema.entity.users.UserEntity;
 import com.example.buildmyschema.repository.UserRepository;
 import com.example.buildmyschema.utils.JwtUtils;
-import io.jsonwebtoken.ExpiredJwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,8 +19,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-
-import static reactor.netty.http.HttpConnectionLiveness.log;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -104,4 +106,27 @@ public class UserServices {
 
     }
 
+    public String saveHistory(HistoryDTO map, String username) {
+        try{
+            UserEntity user = userRepository.findByUsername(username).orElse(null);
+            assert user != null;
+            if(user.getHistory()==null){
+                user.setHistory(new ArrayList<>());
+            }
+
+            user.setUpdatedAt(LocalDateTime.now());
+            user.getHistory().add(Map.of(map.getKey(), map.getValue()));
+            userRepository.save(user);
+            log.info("history saved : {} : {}",map.getKey(),map.getValue());
+            return "history saved successfully";
+        }catch (Exception e){
+            throw new RuntimeException("Exception occurred while save history ", e);
+        }
+    }
+
+    public List<Map<String, String>> getHistory(String username) {
+        UserEntity user = userRepository.findByUsername(username).orElse(null);
+        assert user != null;
+        return user.getHistory();
+    }
 }

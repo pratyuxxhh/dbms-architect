@@ -129,4 +129,10 @@ public class UserServices {
         assert user != null;
         return user.getHistory();
     }
+
+    public UserEntity getUser(String username) {
+        UserEntity user = userRepository.findByUsername(username).orElse(null);
+
+        return user;
+    }
 }

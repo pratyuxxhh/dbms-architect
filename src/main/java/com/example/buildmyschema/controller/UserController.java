@@ -3,6 +3,7 @@ package com.example.buildmyschema.controller;
 import com.example.buildmyschema.entity.users.HistoryDTO;
 import com.example.buildmyschema.entity.users.LoginDTO;
 import com.example.buildmyschema.entity.users.RegisterDTO;
+import com.example.buildmyschema.entity.users.UserEntity;
 import com.example.buildmyschema.service.UserServices;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -55,6 +56,13 @@ public class UserController {
         String username = authentication.getName();
         return new ResponseEntity<>(service.getHistory(username), HttpStatus.OK);
 
+    }
+    @GetMapping("/get-user")
+    public ResponseEntity<UserEntity> getUser(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        assert authentication != null;
+        String username = authentication.getName();
+        return new ResponseEntity<>(service.getUser(username),HttpStatus.OK);
     }
 
 }

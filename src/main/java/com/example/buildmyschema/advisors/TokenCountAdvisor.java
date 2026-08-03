@@ -36,9 +36,9 @@ public class TokenCountAdvisor implements CallAdvisor {
         String username = authentication.getName();
         UserEntity user = userRepository.findByUsername(username).orElse(null);
         if (user != null) {
-            user.setInputTokens(input);
-            user.setOutputTokens(output);
-            user.setTotalTokenUsed(input+output);
+            user.setInputTokens(user.getInputTokens()+input);
+            user.setOutputTokens(user.getOutputTokens()+output);
+            user.setTotalTokenUsed(user.getTotalTokenUsed()+(input+output));
             userRepository.save(user);
         }
         return chatClientResponse;

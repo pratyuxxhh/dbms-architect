@@ -1,9 +1,8 @@
-
 name: Keep Render Backend Awake
 
 on:
   schedule:
-    - cron: "*/21 * * * *"   # Every 20 minutes
+    - cron: "*/20 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -11,6 +10,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: https://dbms-architect-2.onrender.com/public/test
+      - name: Ping Render Backend
         run: |
-          curl -L --silent --show-error --fail https://dbms-architect-2.onrender.com/public/test
+          URL="https://dbms-architect-2.onrender.com/public/test"
+
+          echo "Pinging $URL..."
+
+          HTTP_CODE=$(curl \
+            --location \
+            --silent \
+            --show-error \
+            --max-time 180 \
+            --output response.txt \
+            --write-out "%{http_code}" \
+            "$URL")
+
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response:"
+          cat response.txt
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Request failed!"
+            exit 1
+          fi

@@ -4,18 +4,12 @@ import com.example.buildmyschema.entity.schema.ResponseEntityy;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.AdvisorParams;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.io.IOException;
 
 @Slf4j
 @Service
@@ -23,19 +17,13 @@ public class AiService {
     @Autowired
     private ChatClient chatClient;
     @Autowired
-    private SqlGenerator generator;
-
-    @Autowired
-    private VectorStore vectorStore;
-    @Autowired
-    private EmbeddingModel embeddingModel;
+    private SchemaGenerator generator;
     @Autowired
     private VectorService vectorService;
-    @Value("classpath:prompts/tempSystemPrompt.st")
-    private Resource system;
-    @Value("classpath:prompts/tempUserPrompt.st")
-    private Resource user;
-    public String testAi(String m  , String id ){
+
+    @Autowired
+    private JsonService jsonService;
+    public String aiHealthCheck(String m  , String id ){
         return chatClient.prompt()
                 .advisors(a->a.param(ChatMemory.CONVERSATION_ID , id))
                 .user(m)
@@ -44,44 +32,30 @@ public class AiService {
 
     }
 
-    public ResponseEntityy testAiWithPrivatechatWithCustomOutput(String m  , String id){
-
-
-        return chatClient.prompt()
-                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, id))
-                .advisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
-                .system(s->s.text(system))
-                .user(u->u.text(user).param("message",m))
-                .call()
-                .entity(ResponseEntityy.class);
-
+    public ResponseEntityy generateJsonWithAI(String m  , String dialect, String id){
+        return jsonService.createSchema(m,dialect,id);
     }
 
-    public File generateDownloadableSchemaFile(String m , String id) throws JsonProcessingException {
+    public File getFile(String m , String dialect, String id) throws JsonProcessingException {
         if (!vectorService.isRelevantPrompt(m)) {
             log.info("Prompt not relevant");
             return null;
         }
-            log.info(m);
-            log.info("Prompt is relevant");
+        log.info(m);
+        log.info("Prompt is relevant");
 
-        ResponseEntityy r = testAiWithPrivatechatWithCustomOutput(m , id);
+        ResponseEntityy r = generateJsonWithAI(m ,dialect, id);
         ObjectMapper mapper = new ObjectMapper();
         String minifiedJson = mapper.writeValueAsString(r);
-
         System.out.println(minifiedJson);
-
         try {
-            File result = generator.generateDownloadableFile(minifiedJson);
-            System.out.println("SQL file generated successfully: " + result.getAbsolutePath());
-            return result;
-        } catch (SqlGenerator.InvalidSchemaException e) {
-            System.err.println("Invalid schema JSON: " + e.getMessage());
-            throw new RuntimeException("Invalid schema JSON");
-
-        } catch (IOException e) {
-            System.err.println("I/O error while generating SQL file: " + e.getMessage());
-            throw new RuntimeException("I/O error while generating SQL file");
+            return switch (dialect.toUpperCase()) {
+                case "POSTGRESQL" -> generator.createForPostgress(minifiedJson);
+                case "MYSQL" -> generator.createForSql(minifiedJson);
+                case "ORACLE_DATABASE" -> generator.createForOracle(minifiedJson);
+                case "MICROSOFT_SQL" -> generator.createForMicrosoft(minifiedJson);
+                default -> null;
+            };
 
         } catch (IllegalArgumentException e) {
             System.err.println("Invalid arguments: " + e.getMessage());

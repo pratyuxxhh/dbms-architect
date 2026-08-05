@@ -30,15 +30,15 @@ public class AiController {
     public ResponseEntity<String> testAi(@RequestParam String m) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         assert authentication != null;
-        return new ResponseEntity<>(aiService.testAi(m, authentication.getName()), HttpStatus.OK);
+        return new ResponseEntity<>(aiService.aiHealthCheck(m, authentication.getName()), HttpStatus.OK);
     }
 
     @GetMapping("/download")
-    public ResponseEntity<?> getTheSchemaFile(@RequestParam String m) throws JsonProcessingException {
+    public ResponseEntity<?> getTheSchemaFile(@RequestParam String m,@RequestParam String dialect) throws JsonProcessingException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         assert authentication != null;
         File file = null;
-        file = aiService.generateDownloadableSchemaFile(m,authentication.getName());
+        file = aiService.getFile(m,dialect ,authentication.getName());
 
         if (file == null) {
             return ResponseEntity.badRequest()

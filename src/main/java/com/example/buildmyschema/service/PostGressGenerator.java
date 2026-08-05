@@ -25,38 +25,25 @@ import java.util.Map;
 import java.util.Set;
 
 @Service
-public class SqlGenerator {
+public class PostGressGenerator {
     @Autowired
     private UserRepository userRepository;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private static final int MAX_IDENTIFIER_LENGTH = 64;
-
-    private static final String DEFAULT_ENGINE_CLAUSE =
-            "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci";
+    private static final int MAX_IDENTIFIER_LENGTH = 63;
 
     private static final Set<String> FUNCTION_DEFAULTS = Set.of(
             "CURRENT_TIMESTAMP", "CURRENT_DATE", "CURRENT_TIME", "NOW()", "NOW"
     );
 
-    private static final Set<String> TEMPORAL_TYPES = Set.of(
-            "timestamp", "datetime", "date", "time", "year"
-    );
-
-    private static final Set<String> EXPRESSION_DEFAULT_TYPES = Set.of(
-            "text", "tinytext", "mediumtext", "longtext",
-            "blob", "tinyblob", "mediumblob", "longblob",
-            "json", "geometry"
-    );
-
     private static final Set<String> NUMERIC_TYPES = Set.of(
             "bigint", "int", "smallint", "tinyint", "mediumint",
-            "decimal", "float", "double", "real", "year"
+            "decimal", "numeric", "float", "double", "real", "year"
     );
 
     private static final Set<String> ALLOWED_FK_ACTIONS = Set.of(
-            "CASCADE", "SET NULL", "NO ACTION", "RESTRICT"
+            "CASCADE", "SET NULL", "SET DEFAULT", "NO ACTION", "RESTRICT"
     );
 
     private static final Map<String, String> TYPE_ALIASES = Map.ofEntries(
@@ -67,39 +54,57 @@ public class SqlGenerator {
             Map.entry("float4", "float"),
             Map.entry("float8", "double"),
             Map.entry("double precision", "double"),
-            Map.entry("numeric", "decimal"),
+            Map.entry("bool", "boolean"),
             Map.entry("character varying", "varchar"),
             Map.entry("character", "char"),
-            Map.entry("bool", "boolean"),
-            Map.entry("timestamptz", "timestamp"),
-            Map.entry("timestamp with time zone", "timestamp"),
+            Map.entry("timestamptz", "timestamp with time zone"),
             Map.entry("timestamp without time zone", "timestamp"),
-            Map.entry("timetz", "time"),
-            Map.entry("time with time zone", "time"),
+            Map.entry("timetz", "time with time zone"),
             Map.entry("time without time zone", "time"),
-            Map.entry("jsonb", "json"),
             Map.entry("bytea", "blob")
     );
 
-    private static final Map<String, String> FIXED_TYPE_OVERRIDES = Map.of(
-            "uuid", "CHAR(36)",
-            "money", "DECIMAL(19,2)",
-            "array", "JSON"
+    private static final Map<String, String> FIXED_TYPE_MAP = Map.ofEntries(
+            Map.entry("int", "INTEGER"),
+            Map.entry("bigint", "BIGINT"),
+            Map.entry("smallint", "SMALLINT"),
+            Map.entry("tinyint", "SMALLINT"),
+            Map.entry("mediumint", "INTEGER"),
+            Map.entry("year", "SMALLINT"),
+            Map.entry("float", "REAL"),
+            Map.entry("double", "DOUBLE PRECISION"),
+            Map.entry("real", "REAL"),
+            Map.entry("text", "TEXT"),
+            Map.entry("tinytext", "TEXT"),
+            Map.entry("mediumtext", "TEXT"),
+            Map.entry("longtext", "TEXT"),
+            Map.entry("blob", "BYTEA"),
+            Map.entry("tinyblob", "BYTEA"),
+            Map.entry("mediumblob", "BYTEA"),
+            Map.entry("longblob", "BYTEA"),
+            Map.entry("boolean", "BOOLEAN"),
+            Map.entry("date", "DATE"),
+            Map.entry("time", "TIME"),
+            Map.entry("time with time zone", "TIME WITH TIME ZONE"),
+            Map.entry("datetime", "TIMESTAMP"),
+            Map.entry("timestamp", "TIMESTAMP"),
+            Map.entry("timestamp with time zone", "TIMESTAMP WITH TIME ZONE"),
+            Map.entry("json", "JSONB"),
+            Map.entry("jsonb", "JSONB"),
+            Map.entry("uuid", "UUID"),
+            Map.entry("money", "MONEY")
     );
 
     public File generateDownloadableFile(String inputJson) throws InvalidSchemaException, IOException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        assert authentication != null;
         UserEntity u = userRepository.findByUsername(authentication.getName()).orElse(null);
-
         if (inputJson == null || inputJson.trim().isEmpty()) {
             throw new IllegalArgumentException("inputJson must not be null or empty");
         }
+
+        File sqlFile = File.createTempFile("schema-postgres-", ".sql");
         String[] str = new String[1];
         String sql = generateSql(inputJson, str);
-
-        File sqlFile = File.createTempFile("schema-", ".sql");
-
         try {
             if (u != null) {
                 u.setUpdatedAt(LocalDateTime.now());
@@ -110,11 +115,10 @@ public class SqlGenerator {
         } catch (IOException e) {
             throw new IOException("Failed to write SQL file.", e);
         }
-
         return sqlFile;
     }
 
-    public String generateSql(String schemaJson, String[] str) throws InvalidSchemaException {
+    public String generateSql(String schemaJson ,String[] str) throws InvalidSchemaException {
         if (schemaJson == null || schemaJson.trim().isEmpty()) {
             throw new InvalidSchemaException("Schema JSON is null or empty");
         }
@@ -137,15 +141,15 @@ public class SqlGenerator {
 
         StringBuilder sql = new StringBuilder();
         List<String> fkStatements = new ArrayList<>();
+        List<String> indexStatements = new ArrayList<>();
+        List<String> commentStatements = new ArrayList<>();
 
         for (JsonNode schema : schemas) {
             String schemaName = schema.path("name").asText(null);
             str[0] = schemaName;
             if (schemaName != null && !schemaName.isBlank()) {
-                checkIdentifierLength("Database name", schemaName);
-                sql.append("CREATE DATABASE IF NOT EXISTS ").append(quoteIdent(schemaName))
-                        .append(" CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;\n");
-                sql.append("USE ").append(quoteIdent(schemaName)).append(";\n\n");
+                checkIdentifierLength("Schema name", schemaName);
+                sql.append("CREATE SCHEMA IF NOT EXISTS ").append(quoteIdent(schemaName)).append(";\n\n");
             }
 
             JsonNode tables = schema.path("tables");
@@ -162,15 +166,32 @@ public class SqlGenerator {
                     throw new InvalidSchemaException(
                             "Schema '" + describeSchema(schemaName) + "' has a duplicate table name: '" + tableName + "'");
                 }
-                sql.append(buildCreateTable(table, schemaName));
+                sql.append(buildCreateTable(table, schemaName, commentStatements));
                 fkStatements.addAll(buildForeignKeys(table, schemaName));
+                indexStatements.addAll(buildIndexes(table, schemaName));
             }
+        }
+
+        if (!indexStatements.isEmpty()) {
+            sql.append("-- Indexes\n");
+            for (String idx : indexStatements) {
+                sql.append(idx).append("\n");
+            }
+            sql.append("\n");
         }
 
         if (!fkStatements.isEmpty()) {
             sql.append("-- Foreign key constraints\n");
             for (String fk : fkStatements) {
                 sql.append(fk).append("\n");
+            }
+            sql.append("\n");
+        }
+
+        if (!commentStatements.isEmpty()) {
+            sql.append("-- Comments\n");
+            for (String c : commentStatements) {
+                sql.append(c).append("\n");
             }
         }
 
@@ -191,9 +212,6 @@ public class SqlGenerator {
         }
 
         Set<String> seenColumnNames = new HashSet<>();
-        List<String> primaryKeyOrder = new ArrayList<>();
-        int autoIncrementCount = 0;
-        String autoIncrementColumn = null;
 
         for (JsonNode col : columns) {
             String colName = col.path("name").asText(null);
@@ -213,35 +231,11 @@ public class SqlGenerator {
             }
 
             try {
-                mapType(dataType);
+                mapType(dataType, false);
             } catch (IllegalArgumentException e) {
                 throw new InvalidSchemaException(
                         "Column '" + tableName + "." + colName + "' has an unsupported data type: '" + dataType + "'", e);
             }
-
-            boolean primaryKey = col.path("primaryKey").asBoolean(false);
-            boolean autoIncrement = col.path("autoIncrement").asBoolean(false)
-                    || isSerialFamily(parseType(dataType).base());
-
-            if (primaryKey) {
-                primaryKeyOrder.add(colName);
-            }
-            if (autoIncrement) {
-                autoIncrementCount++;
-                autoIncrementColumn = colName;
-            }
-        }
-
-        if (autoIncrementCount > 1) {
-            throw new InvalidSchemaException(
-                    "Table '" + tableName + "' defines more than one AUTO_INCREMENT column; MySQL allows only one per table");
-        }
-        if (autoIncrementCount == 1 && primaryKeyOrder.size() > 1
-                && !primaryKeyOrder.getFirst().equals(autoIncrementColumn)) {
-            throw new InvalidSchemaException(
-                    "Table '" + tableName + "': when AUTO_INCREMENT is part of a composite PRIMARY KEY, it must be "
-                            + "the first column listed (MySQL requirement). Column '" + autoIncrementColumn
-                            + "' is not first in " + primaryKeyOrder);
         }
 
         for (JsonNode fk : table.path("foreignKeys")) {
@@ -286,7 +280,7 @@ public class SqlGenerator {
         String normalized = normalizeFkAction(action);
         if (!ALLOWED_FK_ACTIONS.contains(normalized)) {
             throw new InvalidSchemaException("Table '" + tableName + "' has a foreign key with an unsupported "
-                    + label + " action '" + action + "'. MySQL/InnoDB supports: " + ALLOWED_FK_ACTIONS);
+                    + label + " action '" + action + "'. PostgreSQL supports: " + ALLOWED_FK_ACTIONS);
         }
     }
 
@@ -301,12 +295,12 @@ public class SqlGenerator {
     private void checkIdentifierLength(String label, String identifier) throws InvalidSchemaException {
         if (identifier.length() > MAX_IDENTIFIER_LENGTH) {
             throw new InvalidSchemaException(
-                    label + " exceeds MySQL's " + MAX_IDENTIFIER_LENGTH
+                    label + " exceeds PostgreSQL's " + MAX_IDENTIFIER_LENGTH
                             + "-character identifier limit: '" + identifier + "'");
         }
     }
 
-    private String buildCreateTable(JsonNode table, String schemaName) {
+    private String buildCreateTable(JsonNode table, String schemaName, List<String> commentStatements) {
         String tableName = table.path("name").asText();
         String fqName = qualifiedName(schemaName, tableName);
 
@@ -314,33 +308,36 @@ public class SqlGenerator {
         Set<String> primaryKeys = new LinkedHashSet<>();
 
         for (JsonNode col : table.path("columns")) {
-            lines.add("  " + buildColumnDefinition(col, primaryKeys));
+            lines.add("  " + buildColumnDefinition(col, primaryKeys, tableName, commentStatements));
         }
 
         if (!primaryKeys.isEmpty()) {
             lines.add("  PRIMARY KEY (" + String.join(", ", quoteAll(new ArrayList<>(primaryKeys))) + ")");
         }
 
-        appendIndexClauses(table, tableName, lines);
-
         StringBuilder sb = new StringBuilder();
         sb.append("CREATE TABLE ").append(fqName).append(" (\n");
         sb.append(String.join(",\n", lines));
-        sb.append("\n) ").append(DEFAULT_ENGINE_CLAUSE);
+        sb.append("\n);\n\n");
 
         String tableComment = table.path("comment").asText(null);
         if (tableComment != null && !tableComment.isBlank()) {
-            sb.append(" COMMENT='").append(tableComment.replace("'", "''")).append("'");
+            commentStatements.add("COMMENT ON TABLE " + fqName + " IS '" + tableComment.replace("'", "''") + "';");
         }
-        sb.append(";\n\n");
+
         return sb.toString();
     }
 
-    private void appendIndexClauses(JsonNode table, String tableName, List<String> lines) {
+    private List<String> buildIndexes(JsonNode table, String schemaName) {
+        List<String> statements = new ArrayList<>();
+        String tableName = table.path("name").asText();
+        String fqName = qualifiedName(schemaName, tableName);
+
         JsonNode indexes = table.path("indexes");
         if (!indexes.isArray()) {
-            return;
+            return statements;
         }
+
         int autoIdx = 0;
         for (JsonNode idx : indexes) {
             autoIdx++;
@@ -354,31 +351,30 @@ public class SqlGenerator {
                 idxName = "idx_" + tableName + "_" + String.join("_", idxColumns) + "_" + autoIdx;
             }
             idxName = truncateIdentifier(idxName);
-            String keyword = unique ? "UNIQUE KEY" : "KEY";
-            lines.add("  " + keyword + " " + quoteIdent(idxName) + " (" + String.join(", ", quoteAll(idxColumns)) + ")");
+            String keyword = unique ? "CREATE UNIQUE INDEX" : "CREATE INDEX";
+            statements.add(keyword + " " + quoteIdent(idxName) + " ON " + fqName
+                    + " (" + String.join(", ", quoteAll(idxColumns)) + ");");
         }
+        return statements;
     }
 
-    private String buildColumnDefinition(JsonNode col, Set<String> primaryKeys) {
+    private String buildColumnDefinition(JsonNode col, Set<String> primaryKeys, String tableName,
+                                         List<String> commentStatements) {
         String name = col.path("name").asText();
         String dataType = col.path("dataType").asText();
         boolean nullable = col.path("nullable").asBoolean(true);
         boolean primaryKey = col.path("primaryKey").asBoolean(false);
         boolean unique = col.path("unique").asBoolean(false);
-        boolean declaredAutoIncrement = col.path("autoIncrement").asBoolean(false);
+        boolean autoIncrement = col.path("autoIncrement").asBoolean(false);
         String defaultValue = col.path("defaultValue").asText("");
         String comment = col.path("comment").asText(null);
-
-        TypeInfo type = parseType(dataType);
-        boolean autoIncrement = declaredAutoIncrement || isSerialFamily(type.base());
-        boolean effectiveUnique = unique || (autoIncrement && !primaryKey);
 
         if (primaryKey) {
             primaryKeys.add(name);
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append(quoteIdent(name)).append(" ").append(mapType(dataType));
+        sb.append(quoteIdent(name)).append(" ").append(mapType(dataType, autoIncrement));
 
         if (!nullable) {
             sb.append(" NOT NULL");
@@ -386,63 +382,83 @@ public class SqlGenerator {
         if (!defaultValue.isBlank() && !defaultValue.equalsIgnoreCase("NULL")) {
             sb.append(" DEFAULT ").append(formatDefault(defaultValue, dataType));
         }
-        if (autoIncrement) {
-            sb.append(" AUTO_INCREMENT");
-        }
-        if (effectiveUnique && !primaryKey) {
+        if (unique && !primaryKey) {
             sb.append(" UNIQUE");
         }
+
+        String enumCheck = buildEnumCheck(dataType, name);
+        if (enumCheck != null) {
+            sb.append(" ").append(enumCheck);
+        }
+
         if (comment != null && !comment.isBlank()) {
-            sb.append(" COMMENT '").append(comment.replace("'", "''")).append("'");
+            String fqCol = quoteIdent(tableName) + "." + quoteIdent(name);
+            commentStatements.add("COMMENT ON COLUMN " + fqCol + " IS '" + comment.replace("'", "''") + "';");
         }
 
         return sb.toString();
     }
 
-    private record TypeInfo(String base, String precision) {}
+    private record TypeInfo(String base, String precision, boolean isArray) {}
 
     private TypeInfo parseType(String rawDataType) {
         String original = rawDataType.trim();
+
+        boolean isArray = false;
+        if (original.endsWith("[]")) {
+            isArray = true;
+            original = original.substring(0, original.length() - 2).trim();
+        }
+
         int parenIdx = original.indexOf('(');
         String basePartOriginal = parenIdx >= 0 ? original.substring(0, parenIdx) : original;
         String precision = parenIdx >= 0 ? original.substring(parenIdx) : "";
 
         String baseLower = basePartOriginal.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
-        if (baseLower.contains("[]")) {
-            return new TypeInfo("array", "");
-        }
         baseLower = TYPE_ALIASES.getOrDefault(baseLower, baseLower);
-        return new TypeInfo(baseLower, precision);
+        return new TypeInfo(baseLower, precision, isArray);
     }
 
     private boolean isSerialFamily(String base) {
         return base.equals("serial") || base.equals("bigserial") || base.equals("smallserial");
     }
 
-    private String mapType(String rawDataType) {
+    private String mapType(String rawDataType, boolean autoIncrement) {
         TypeInfo type = parseType(rawDataType);
         String base = type.base();
         if (base.isEmpty()) {
             throw new IllegalArgumentException("Empty data type");
         }
 
-        if (FIXED_TYPE_OVERRIDES.containsKey(base)) {
-            return FIXED_TYPE_OVERRIDES.get(base);
+        String mapped;
+        if (isSerialFamily(base)) {
+            mapped = base.toUpperCase(Locale.ROOT);
+        } else if (autoIncrement && (base.equals("int") || base.equals("bigint") || base.equals("smallint"))) {
+            mapped = switch (base) {
+                case "bigint" -> "BIGSERIAL";
+                case "smallint" -> "SMALLSERIAL";
+                default -> "SERIAL";
+            };
+        } else if (base.equals("enum")) {
+            mapped = "TEXT";
+        } else if (FIXED_TYPE_MAP.containsKey(base)) {
+            mapped = FIXED_TYPE_MAP.get(base);
+        } else if (base.equals("varchar") || base.equals("char") || base.equals("decimal")
+                || base.equals("numeric")) {
+            mapped = (base.equals("decimal") ? "NUMERIC" : base.toUpperCase(Locale.ROOT)) + type.precision();
+        } else {
+            mapped = base.toUpperCase(Locale.ROOT) + type.precision();
         }
 
-        return switch (base) {
-            case "serial" -> "INT";
-            case "bigserial" -> "BIGINT";
-            case "smallserial" -> "SMALLINT";
-            case "boolean" -> "TINYINT(1)";
-            default -> {
-                String precision = type.precision();
-                if (base.equals("varchar") && precision.isEmpty()) {
-                    precision = "(255)";
-                }
-                yield base.toUpperCase(Locale.ROOT) + precision;
-            }
-        };
+        return type.isArray() ? mapped + "[]" : mapped;
+    }
+
+    private String buildEnumCheck(String rawDataType, String columnName) {
+        TypeInfo type = parseType(rawDataType);
+        if (!type.base().equals("enum") || type.precision().isEmpty()) {
+            return null;
+        }
+        return "CHECK (" + quoteIdent(columnName) + " IN " + type.precision() + ")";
     }
 
     private String formatDefault(String defaultValue, String dataType) {
@@ -455,13 +471,12 @@ public class SqlGenerator {
         String base = parseType(dataType).base();
 
         if (FUNCTION_DEFAULTS.contains(upper)) {
-            String canonical = (upper.equals("NOW") || upper.equals("NOW()")) ? "CURRENT_TIMESTAMP" : upper;
-            return TEMPORAL_TYPES.contains(base) ? canonical : "(" + canonical + ")";
+            return (upper.equals("NOW") || upper.equals("NOW()")) ? "CURRENT_TIMESTAMP" : upper;
         }
 
         if (base.equals("boolean")) {
             boolean boolVal = upper.equals("TRUE") || upper.equals("1");
-            return boolVal ? "1" : "0";
+            return boolVal ? "TRUE" : "FALSE";
         }
 
         if (NUMERIC_TYPES.contains(base)) {
@@ -472,9 +487,7 @@ public class SqlGenerator {
             }
         }
 
-        String literal = "'" + unwrapped.replace("'", "''") + "'";
-
-        return EXPRESSION_DEFAULT_TYPES.contains(base) ? "(" + literal + ")" : literal;
+        return "'" + unwrapped.replace("'", "''") + "'";
     }
 
     private List<String> buildForeignKeys(JsonNode table, String schemaName) {
@@ -528,9 +541,9 @@ public class SqlGenerator {
         String trimmed = ident.trim();
         if (trimmed.length() > MAX_IDENTIFIER_LENGTH) {
             throw new IllegalArgumentException(
-                    "Identifier exceeds MySQL's " + MAX_IDENTIFIER_LENGTH + "-character limit: " + trimmed);
+                    "Identifier exceeds PostgreSQL's " + MAX_IDENTIFIER_LENGTH + "-character limit: " + trimmed);
         }
-        return "`" + trimmed.replace("`", "``") + "`";
+        return "\"" + trimmed.replace("\"", "\"\"") + "\"";
     }
 
     private String truncateIdentifier(String name) {

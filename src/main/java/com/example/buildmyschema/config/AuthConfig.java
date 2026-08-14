@@ -1,6 +1,7 @@
 package com.example.buildmyschema.config;
 
 import com.example.buildmyschema.filters.JwtFilter;
+import com.example.buildmyschema.filters.RateLimitFilter;
 import com.example.buildmyschema.service.UserDetailServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +32,8 @@ public class AuthConfig {
 
     @Autowired
     private JwtFilter jwtFilter;
+    @Autowired
+    private RateLimitFilter rateLimitFilter;
 
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -60,6 +63,7 @@ public class AuthConfig {
                         .requestMatchers("/public/**").permitAll()
                         .requestMatchers("/user/**", "/ai/**").authenticated()
                         .anyRequest().authenticated())
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

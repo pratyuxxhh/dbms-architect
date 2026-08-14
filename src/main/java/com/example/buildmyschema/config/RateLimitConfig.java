@@ -18,34 +18,40 @@ import java.time.Duration;
 
 @Configuration
 public class RateLimitConfig {
-    @Value("${spring.data.redis.host:localhost}")
-    private String redisHost;
-
-    @Value("${spring.data.redis.port:6379}")
-    private int redisPort;
+    @Value("${REDIS_URL}")
+    private String redisUrl;
 
     @Bean
     public RedisClient redisClient() {
-        return RedisClient.create(RedisURI.builder()
-                .withHost(redisHost)
-                .withPort(redisPort)
-                .build());
+        return RedisClient.create(RedisURI.create(redisUrl));
     }
 
     @Bean
     public ProxyManager<String> proxyManager(RedisClient redisClient) {
-        StatefulRedisConnection<String, byte[]> redisConnection = redisClient
-                .connect(RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE));
 
-        // Define TTL for buckets (removes unused IPs from Redis after 1 hour)
-        ExpirationAfterWriteStrategy expirationStrategy = ExpirationAfterWriteStrategy
-                .basedOnTimeForRefillingBucketUpToMax(Duration.ofHours(1));
+        StatefulRedisConnection<String, byte[]> redisConnection =
+                redisClient.connect(
+                        RedisCodec.of(
+                                StringCodec.UTF8,
+                                ByteArrayCodec.INSTANCE
+                        )
+                );
 
-        ClientSideConfig clientConfig = ClientSideConfig.getDefault()
-                .withExpirationAfterWriteStrategy(expirationStrategy);
+        // Remove unused buckets from Redis after 1 hour
+        ExpirationAfterWriteStrategy expirationStrategy =
+                ExpirationAfterWriteStrategy
+                        .basedOnTimeForRefillingBucketUpToMax(
+                                Duration.ofHours(1)
+                        );
 
-        // Build the ProxyManager
-        return LettuceBasedProxyManager.builderFor(redisConnection)
+        ClientSideConfig clientConfig =
+                ClientSideConfig.getDefault()
+                        .withExpirationAfterWriteStrategy(
+                                expirationStrategy
+                        );
+
+        return LettuceBasedProxyManager
+                .builderFor(redisConnection)
                 .withClientSideConfig(clientConfig)
                 .build();
     }

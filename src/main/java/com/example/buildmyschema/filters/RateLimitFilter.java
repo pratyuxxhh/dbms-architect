@@ -69,4 +69,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
         return xfHeader.split(",")[0].trim();
     }
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+
+        return "OPTIONS".equalsIgnoreCase(request.getMethod())
+                || path.startsWith("/actuator/health");
+    }
 }

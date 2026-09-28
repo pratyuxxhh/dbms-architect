@@ -1,6 +1,6 @@
 # Docker Compose setup
 
-The Compose stack runs the Spring Boot API, MongoDB, and Redis together. The
+The Compose stack runs the Spring Boot API and MongoDB together. The
 application still needs `OPENAI_API_KEY`, `REACT_APP_URL`, and `STRING_TEST` in
 the local `.env` file.
 
@@ -19,7 +19,7 @@ The API is available at `http://localhost:8080` by default. Set `PORT` in
 docker compose down
 ```
 
-To also delete the MongoDB and Redis data volumes:
+To also delete the MongoDB data volume:
 
 ```powershell
 docker compose down -v

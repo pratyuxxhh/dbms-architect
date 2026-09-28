@@ -118,11 +118,16 @@ public class OracleSqlGenerator {
     private static final Set<String> JSON_CHECK_TYPES = Set.of("json", "array");
 
     public File generateDownloadableFile(String inputJson) throws InvalidSchemaException, IOException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserEntity u = userRepository.findByUsername(authentication.getName()).orElse(null);
         if (inputJson == null || inputJson.trim().isEmpty()) {
             throw new IllegalArgumentException("inputJson must not be null or empty");
         }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserEntity u = null;
+        if (authentication != null && authentication.isAuthenticated() && userRepository != null) {
+            u = userRepository.findByUsername(authentication.getName()).orElse(null);
+        }
+
         String[] str = new String[1];
         String sql = generateSql(inputJson , str);
         File sqlFile = File.createTempFile("schema-oracle-", ".sql");
